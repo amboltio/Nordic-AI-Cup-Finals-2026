@@ -1,0 +1,15 @@
+# Lower bounds rather than exact pins, deliberately: you will almost certainly
+# be installing an RL or ML stack alongside these, and hard pins here would
+# fight it. Verified on Python 3.10, 3.12 and 3.14 against the versions in
+# brackets.
+
+fastapi>=0.115            # [0.142.2]
+uvicorn>=0.30             # [0.54.0]
+pydantic>=2.7,<3          # [2.13.5]
+numpy>=1.26               # [2.5.3]
+requests>=2.31            # [2.34.2]
+
+# Only needed to draw the game (local_playground.py, local_evaluator.py
+# --render). pygame-ce is a drop-in fork of pygame - you still `import pygame` -
+# that also installs on Python 3.13+, where plain pygame has no wheels.
+pygame-ce>=2.5            # [2.5.8]
