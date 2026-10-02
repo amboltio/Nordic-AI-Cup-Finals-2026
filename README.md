@@ -47,14 +47,11 @@ competition. Only finalist teams can queue attempts.
 
 ## When
 
-TODO(finals): confirm. The finals are planned to run from
-**14 October 2026, 10:00** to **15 October 2026, 16:00** Danish time
-(CEST, UTC+2). The finals page shows the exact times in your own time zone.
+The finals are planned to run from
+**14 October 2026, 09:00** to **15 October 2026, 09:00** Reykjavik time
+(UTC+0). The finals page shows the exact times in your own time zone.
 
 Attempts can only be queued while the finals are open.
-
-TODO(finals): where the finals take place (on site, remote, or both), and the
-programme for the two days.
 
 ## Submission
 
@@ -87,22 +84,9 @@ The team with the highest evaluation score wins. If two teams have the same
 evaluation score, the team whose evaluation attempt finished first ranks
 higher.
 
-TODO(finals): ceremony time and place. Planned for 15 October 2026 at 17:00
-Danish time.
-
-TODO(finals): prizes.
-
 TODO(finals): will the top teams be asked to hand in their code and agent for
 verification by the Scientific Jury, as in the main competition? If so, by
 when?
-
-## Discord server
-
-Come hang out and talk to the other finalists on our Discord server, and get
-in touch with the organizers if something is not working.
-TODO(finals): Discord link, and the finals channel if there is one.
-
-TODO(finals): when organizers answer during the finals (e.g. 08:00 to 16:00).
 
 ## Getting started
 
