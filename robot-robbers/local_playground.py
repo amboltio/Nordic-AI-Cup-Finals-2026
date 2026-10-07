@@ -12,7 +12,7 @@ provided it is fast enough, which only ``local_evaluator.py`` can tell you.
 """
 
 import argparse
-import random
+import secrets
 import statistics
 import sys
 
@@ -84,11 +84,11 @@ def main() -> int:
     if args.keyboard and args.headless:
         parser.error('--keyboard needs the window; drop --headless.')
 
-    first_seed = args.seed if args.seed is not None else random.randrange(2 ** 32)
+    first_seed = args.seed if args.seed is not None else secrets.randbits(128)
     scores = []
 
     for game in range(args.games):
-        seed = (first_seed + game) % 2 ** 32
+        seed = first_seed + game
         score = play_game(seed, args.ticks, render=not args.headless,
                           keyboard=args.keyboard)
         scores.append(score)

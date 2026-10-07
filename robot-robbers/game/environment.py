@@ -14,6 +14,7 @@ file, and where the two disagree this file wins.
 after a fixed number of ticks (``dtos.N_TICKS``).
 """
 
+import heapq
 import numpy as np
 
 from os import path
@@ -22,6 +23,13 @@ SPRITE_DIRECTORY = path.join(path.dirname(path.abspath(__file__)), 'sprites')
 
 legal_moves = set((-1, 1, 0))
 
+# The eight steps a scrooge can take, and what each costs in distance.
+_STEPS = [(dx, dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1) if dx or dy]
+_DIAGONAL = np.sqrt(2)
+
+
+def _sign(v):
+    return 1 if v > 0 else -1 if v < 0 else 0
 
 class RobotRobbersEnv:
     def __init__(self) -> None:
@@ -47,6 +55,8 @@ class RobotRobbersEnv:
         self._scrooge_radius = 15
         self._scrooges_move_interval = 2
         self._robber_cooldown_ticks = 100
+        self._no_bag_cooldown_ticks = 33
+        self._max_chasers_per_robber = 3
 
         # Empty world state
         self._robber_positions = np.ones(
@@ -88,7 +98,11 @@ class RobotRobbersEnv:
         self.random = None
 
     def reset(self, seed=None) -> tuple:
-        self.random = np.random.RandomState(seed)
+        # The map comes from the low 32 bits of the seed.
+        # Everything during play (bag and drop spot spawns, scrooge wandering)
+        # comes from a second, independent stream derived from the whole seed. 
+        seed_sequence = np.random.SeedSequence(seed)
+        self.random = np.random.RandomState(seed_sequence.entropy % 2 ** 32)
 
         self._n_scrooges = self.max_n_scrooges
         self._n_obstacles = self.random.randint(2, self.max_n_obstacles)
@@ -99,12 +113,20 @@ class RobotRobbersEnv:
                 1, self._max_obstacle_size)
             self._obstacles[i, :] = (x, y, w, h)
 
+        # Scrooges never share a cell, so they start on different ones.
+        taken = set()
         for i in range(self._n_scrooges):
-            self._scrooge_positions[i, :] = self._get_free_cell()
+            cell = self._get_free_cell()
+            while cell in taken:
+                cell = self._get_free_cell()
+            taken.add(cell)
+            self._scrooge_positions[i, :] = cell
 
         for i in range(self.n_robbers):
             self._robber_positions[i, :] = self._get_free_cell()
 
+        self.random = np.random.RandomState(
+            np.random.PCG64(seed_sequence.spawn(1)[0]))
         return self._get_observation()
 
     def is_valid_action(self, actions) -> bool:
@@ -151,7 +173,9 @@ class RobotRobbersEnv:
 
                 # Give a penalty and take away the cashbag
                 if rx == sx and ry == sy and self._robber_cooldown[i] <= 0:
-                    self._robber_cooldown[i] = self._robber_cooldown_ticks
+                    self._robber_cooldown[i] = (
+                        self._robber_cooldown_ticks if has_cashbags
+                        else self._no_bag_cooldown_ticks)
 
                     if has_cashbags:
                         self._reward -= 3
@@ -392,41 +416,149 @@ class RobotRobbersEnv:
         if not self._game_ticks % self._scrooges_move_interval == 0:
             return
 
+        targets = self._assign_scrooge_targets()
+
         for i in range(self._n_scrooges):
 
             x, y = self._scrooge_positions[i]
 
-            distances = [
-                self._dist(x, y, *self._robber_positions[idx])
-                if self._robber_cooldown[idx] <= 0 else np.inf
-                for idx in range(self.n_robbers)
-            ]
-
-            if len(distances) == 0:
+            if targets[i] is None:
                 # Move randomly
                 dx, dy = self.random.randint(-1, 2), self.random.randint(-1, 2)
-                x += dx
-                y += dy
-
-                self._scrooge_positions[i] = x, y
-
-                continue
-
-            closest_robber = np.argmin(distances)
-            if distances[closest_robber] < self._scrooge_radius:
-                # Move towards the closest robber if within radius
-                rx, ry = self._robber_positions[closest_robber]
-                dx, dy = rx - x, ry - y
-                x += 1 if dx > 0 else -1 if dx < 0 else 0
-                y += 1 if dy > 0 else -1 if dy < 0 else 0
-
             else:
-                # Move randomly
-                dx, dy = self.random.randint(-1, 2), self.random.randint(-1, 2)
-                x += dx
-                y += dy
+                # Move towards the robber this scrooge chases
+                dx, dy = self._chase_step(x, y, targets[i])
 
-            if not self._is_cell_free(x, y):
+            x += dx
+            y += dy
+
+            if not self._is_cell_free(x, y) or self._is_scrooge_at(x, y, i):
                 continue
 
             self._scrooge_positions[i] = x, y
+
+    def _assign_scrooge_targets(self):
+        """The robber each scrooge chases this move, or None to wander.
+
+        A scrooge chases the nearest robber that is not immune and is closer
+        than ``_scrooge_radius``, measured along the shortest way around the
+        obstacles. At most ``_max_chasers_per_robber`` scrooges chase the same
+        robber: the nearest ones get it, and the rest go for their next
+        nearest robber in range, or wander.
+        """
+        self._path_fields = {}
+        claims = []
+
+        for i in range(self._n_scrooges):
+            x, y = self._scrooge_positions[i]
+            for r in range(self.n_robbers):
+                if self._robber_cooldown[r] > 0:
+                    continue
+                distance = self._chase_distance(x, y, r)
+                if distance < self._scrooge_radius:
+                    claims.append((distance, i, r))
+
+        targets = [None] * self._n_scrooges
+        n_chasers = [0] * self.n_robbers
+        for _, i, r in sorted(claims):
+            if targets[i] is None and n_chasers[r] < self._max_chasers_per_robber:
+                targets[i] = r
+                n_chasers[r] += 1
+
+        return targets
+
+    def _chase_distance(self, x, y, robber):
+        """Distance from (x, y) to a robber, the way a scrooge has to walk it.
+
+        The straight-line distance when nothing is in the way, as before;
+        otherwise the length of the shortest path around the obstacles, which
+        is never shorter.
+        """
+        rx, ry = self._robber_positions[robber]
+        distance = self._dist(x, y, rx, ry)
+
+        if distance >= self._scrooge_radius or self._is_straight_path_clear(x, y, rx, ry):
+            return distance
+
+        return self._path_field(robber).get((int(x), int(y)), np.inf)
+
+    def _chase_step(self, x, y, robber):
+        """The step a scrooge at (x, y) takes towards a robber."""
+        rx, ry = self._robber_positions[robber]
+        straight = _sign(rx - x), _sign(ry - y)
+
+        if self._is_straight_path_clear(x, y, rx, ry):
+            return straight
+
+        # Something is in the way: take the first step of the shortest path
+        # around it, preferring the straight step when it is as good.
+        field = self._path_field(robber)
+        x, y = int(x), int(y)
+        best, best_distance = (0, 0), np.inf
+
+        for dx, dy in [straight] + _STEPS:
+            distance = (_DIAGONAL if dx and dy else 1) + \
+                field.get((x + dx, y + dy), np.inf)
+            if distance < best_distance:
+                best, best_distance = (dx, dy), distance
+
+        return best
+
+    def _is_straight_path_clear(self, x, y, tx, ty):
+        """Whether stepping straight at (tx, ty) from (x, y) reaches it.
+
+        The straight steps are the ones a scrooge takes when nothing is in the
+        way: diagonally until level with the target on one axis, then along
+        the other.
+        """
+        x, y, tx, ty = int(x), int(y), int(tx), int(ty)
+
+        while (x, y) != (tx, ty):
+            x += _sign(tx - x)
+            y += _sign(ty - y)
+            if not self._is_cell_free(x, y):
+                return False
+
+        return True
+
+    def _path_field(self, robber):
+        """Shortest walking distance from every cell near a robber to it.
+
+        Steps cost 1 straight and sqrt(2) diagonally, like the straight-line
+        distance they stand in for. Only cells within the chase radius (plus
+        one step) are filled in; the rest are too far to chase from anyway.
+        Computed once per robber per scrooge move.
+        """
+        if robber in self._path_fields:
+            return self._path_fields[robber]
+
+        start = tuple(int(v) for v in self._robber_positions[robber])
+        limit = self._scrooge_radius + _DIAGONAL
+        field = {start: 0.0}
+        queue = [(0.0, start)]
+
+        while queue:
+            distance, (x, y) = heapq.heappop(queue)
+            if distance > field[(x, y)]:
+                continue
+
+            for dx, dy in _STEPS:
+                cell = x + dx, y + dy
+                next_distance = distance + (_DIAGONAL if dx and dy else 1)
+                if (next_distance < limit
+                        and next_distance < field.get(cell, np.inf)
+                        and self._is_cell_free(*cell)):
+                    field[cell] = next_distance
+                    heapq.heappush(queue, (next_distance, cell))
+
+        self._path_fields[robber] = field
+        return field
+
+    def _is_scrooge_at(self, x, y, scrooge):
+        """Whether a scrooge other than ``scrooge`` stands on (x, y)."""
+        return any(
+            j != scrooge
+            and self._scrooge_positions[j, 0] == x
+            and self._scrooge_positions[j, 1] == y
+            for j in range(self._n_scrooges)
+        )

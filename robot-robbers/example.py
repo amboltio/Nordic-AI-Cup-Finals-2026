@@ -13,8 +13,9 @@ What it does not do, and where your points are:
   carried slows a robot down. The baseline drops off as soon as it has one.
 * route around obstacles. Sliding along one axis gets it stuck in corners.
 * coordinate, beyond not sending two robots after the same bag.
-* use the 100 ticks of immunity a robot gets after it is caught. The state
-  does not include it, so you have to track it yourself.
+* use the immunity a robot gets after it is caught: 100 ticks if it was
+  carrying bags, 33 if it was not. The state does not include it, so you have
+  to track it yourself.
 
 It is stateless and cheap, so it never comes near the time budget. Replace
 ``predict`` with your own agent; keep the signature and api.py will serve it.
