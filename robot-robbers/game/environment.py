@@ -104,6 +104,20 @@ class RobotRobbersEnv:
         seed_sequence = np.random.SeedSequence(seed)
         self.random = np.random.RandomState(seed_sequence.entropy % 2 ** 32)
 
+        # Clear anything left over from a previous game.
+        self._robber_positions[:] = -1
+        self._scrooge_positions[:] = -1
+        self._cashbag_positions[:] = -1
+        self._dropspot_positions[:] = -1
+        self._obstacles[:] = -1
+        self._cashbag_carriers[:] = 0
+        self._robber_cooldown[:] = 0
+        self._reward = 0
+        self._total_reward = 0
+        self._n_cashbags = 0
+        self._n_dropspots = 0
+        self._game_ticks = 0
+
         self._n_scrooges = self.max_n_scrooges
         self._n_obstacles = self.random.randint(2, self.max_n_obstacles)
 
@@ -125,8 +139,12 @@ class RobotRobbersEnv:
         for i in range(self.n_robbers):
             self._robber_positions[i, :] = self._get_free_cell()
 
-        self.random = np.random.RandomState(
-            np.random.PCG64(seed_sequence.spawn(1)[0]))
+        self._pending_dropspots = [
+            self._get_free_cell() for _ in range(self.max_n_dropspots)]
+        
+        play_seed, bag_seed = seed_sequence.spawn(2)
+        self._bag_random = np.random.RandomState(np.random.PCG64(bag_seed))
+        self.random = np.random.RandomState(np.random.PCG64(play_seed))
         return self._get_observation()
 
     def is_valid_action(self, actions) -> bool:
@@ -190,11 +208,13 @@ class RobotRobbersEnv:
             for ci in range(self.max_n_cashbags):
                 cix, ciy = self._cashbag_positions[ci]
                 if cix == -1:
-                    self._cashbag_positions[ci, :] = self._get_free_cell()
+                    self._cashbag_positions[ci, :] = self._get_free_cell(
+                        self._bag_random)
                     self._n_cashbags += 1
 
         if self._n_dropspots < self.max_n_dropspots:
-            self._dropspot_positions[self._n_dropspots, :] = self._get_free_cell()
+            self._dropspot_positions[self._n_dropspots, :] = \
+                self._pending_dropspots[self._n_dropspots]
             self._n_dropspots += 1
 
         episode_reward = int(self._reward)
@@ -307,13 +327,14 @@ class RobotRobbersEnv:
 
         return True
 
-    def _get_free_cell(self):
-        x = self.random.randint(0, self.width)
-        y = self.random.randint(0, self.height)
+    def _get_free_cell(self, rng=None):
+        rng = rng or self.random
+        x = rng.randint(0, self.width)
+        y = rng.randint(0, self.height)
 
         while not self._is_cell_free(x, y):
-            x = self.random.randint(0, self.width)
-            y = self.random.randint(0, self.height)
+            x = rng.randint(0, self.width)
+            y = rng.randint(0, self.height)
 
         return x, y
 
