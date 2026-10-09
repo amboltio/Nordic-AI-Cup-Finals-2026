@@ -229,7 +229,8 @@ One POST per tick, as JSON:
 `reward` and `total_reward` are sent as floats (`4.0`), but are always whole
 numbers. After you answer the last request, its move is played and the game
 ends. There is no further request, so you never see the reward of your last
-move.
+move.These fields are omitted during final evaluation, so agents must not 
+depend on them.
 
 ### Reading `state`
 
