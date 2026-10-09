@@ -63,9 +63,9 @@ python local_evaluator.py
 ```
 
 You now have a working endpoint and a number to improve. The baseline is a
-greedy agent that plays sensibly and scores about 13 per game on average
+greedy agent that plays sensibly and scores about 16 per game on average
 (TODO(finals): re-measure once the tick count is final; measured at 3000
-ticks over 20 maps, range -17 to 77). For comparison, standing still scores 0
+ticks over 20 maps, range -17 to 46). For comparison, standing still scores 0
 and random moves score about -5.
 
 ### What is in this folder
@@ -127,7 +127,7 @@ moves = [
   global tick counter, not a per-robot timer, so the first step after a
   pickup can come sooner than `n + 1` ticks later.
 - Robots do not block each other or the scrooges. Any number of them can
-  share a cell.
+  share a cell. (Scrooges do block each other; see below.)
 
 ### Cash bags and drop spots
 
@@ -150,8 +150,9 @@ Bags respawn at random free cells. Whenever fewer than five bags are in play
 map is topped back up to five bags even while robots are carrying some, and
 between five and nine bags can be in play at once.
 
-Drop spots never move and never run out. The three of them appear one per
-tick over the first three ticks; bags appear after the first tick. **The very
+Drop spots never move and never run out. They are part of the map: the same
+seed always gives the same three drop spots, however you play. They appear one
+per tick over the first three ticks; bags appear after the first tick. **The very
 first request, at `game_ticks = 0`, has no bags and no drop spots in it.**
 
 ### Scrooges
@@ -159,18 +160,30 @@ first request, at `game_ticks = 0`, has no bags and no drop spots in it.**
 Scrooges move every second tick (on ticks where `game_ticks` is even), one
 cell in any of the eight directions:
 
-- If a robot is within a distance of **15** (straight-line, Euclidean), the
-  scrooge steps towards the nearest such robot.
-- Otherwise it takes a random step, which may be standing still.
-- A step into an obstacle or off the grid is skipped.
+- A scrooge chases the nearest robot within a distance of **15**. The
+  distance is the one the scrooge has to walk: straight-line (Euclidean) when
+  nothing is in the way, otherwise the length of the shortest path around the
+  obstacles, counting 1 for a straight step and √2 for a diagonal one. A robot
+  that is close but only reachable by a long detour is out of range.
+- A chasing scrooge steps straight towards its robot when nothing is in the
+  way, and otherwise takes the first step of the shortest path around the
+  obstacles.
+- At most **3** scrooges chase the same robot. If more have it as their
+  nearest, the 3 closest chase it and the others go for their next nearest
+  robot in range, or wander.
+- A scrooge with no robot to chase takes a random step, which may be
+  standing still.
+- A step into an obstacle, off the grid or onto another scrooge is skipped.
+  Two scrooges never share a cell.
 
 When a robot is on the same cell as a scrooge, the robot is **caught**:
 
-- If it was carrying bags, it loses all of them and you get **-3**, however
-  many it was carrying. The bags are gone; new ones respawn elsewhere.
-- Either way, carrying or not, the robot becomes **immune for 100 ticks**.
-  While immune it cannot be caught again, and scrooges ignore it: they chase
-  the nearest robot that is *not* immune, or wander.
+- If it was carrying bags, it loses all of them and you get **-3**. The bags 
+  are gone; new ones respawn elsewhere.
+- Either way, the robot becomes **immune**: for **100 ticks** if it was
+  carrying bags, and for **33 ticks** if it was not. While immune it cannot be
+  caught again, and scrooges ignore it: they chase the nearest robot that is
+  *not* immune, or wander.
 
 Immunity is not part of the state you receive. If you want to use it, track
 it yourself: you can tell a robot was caught when it was on a scrooge's cell.
@@ -192,7 +205,9 @@ first and is caught after (losing nothing, since it just dropped off). A
 scrooge that steps onto a robot in step 5 only catches it in step 4 of the
 next tick, if the robot is still there.
 
-Robots and scrooges start on random free cells, which can be the same cell.
+Robots and scrooges start on random free cells. A robot can start on the
+same cell as another robot or a scrooge, but no two scrooges start on the same
+cell.
 
 > [!NOTE]
 > TODO(finals): the rules in this section describe the game exactly as it
@@ -327,11 +342,14 @@ finals run. Validation games have no replays, so the first entry in each
 validation attempt's error list tells you its seed instead:
 
 ```text
-Info (not an error): this validation game used seed 2820439029. Replay it locally with local_evaluator.py --seed 2820439029.
+Info (not an error): this validation game used seed 30738956785357439708437121904581776564. Replay it locally with local_evaluator.py --seed 30738956785357439708437121904581776564.
 ```
 
-Run `python local_evaluator.py --seed 2820439029` and you get the same map and
-the same game, move for move, as long as your agent makes the same moves.
+Run `python local_evaluator.py --seed 30738956785357439708437121904581776564` and you get the same
+map and the same game, move for move, as long as your agent makes the same
+moves. Seeds are 128-bit numbers, so copy the whole seed: the map only depends
+on part of it, so a shortened seed can give the right map but a different
+game.
 
 **Evaluation** plays **one game** on a fixed map that is not published, and
 you get **one completed attempt only**. That score is the one the finals are
@@ -342,7 +360,7 @@ award ceremony, together with replays of the evaluation games. If two teams
 have the same evaluation score, the team whose evaluation attempt finished
 first ranks higher.
 
-Scores vary a lot from map to map (the baseline ranges from -17 to 77), so
+Scores vary a lot from map to map (the baseline ranges from -17 to 46), so
 judge your agent on many maps rather than one. `local_playground.py --headless
 --games 50` is the fast way to do that.
 
@@ -363,7 +381,7 @@ with the service's tick count, timeout, budget and error handling:
 
 ```cmd
 python local_evaluator.py                          # a random map, like validation
-python local_evaluator.py --seed 2820439029        # replay a validation game
+python local_evaluator.py --seed 30738956785357439708437121904581776564  # replay a validation game
 python local_evaluator.py --render                 # watch while it plays
 python local_evaluator.py --simulate-latency-ms 60 # pretend you are further away
 ```

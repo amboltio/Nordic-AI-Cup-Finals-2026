@@ -8,7 +8,7 @@ server holds up for a whole game before you spend your one evaluation attempt
 finding out.
 
     python local_evaluator.py                      # a random map, like validation
-    python local_evaluator.py --seed 2820439029    # replay a validation game
+    python local_evaluator.py --seed 30738956785357439708437121904581776564  # replay a validation game
     python local_evaluator.py --render             # watch it (needs pygame)
     python local_evaluator.py --simulate-latency-ms 60
 
@@ -22,7 +22,7 @@ agent can afford.
 """
 
 import argparse
-import random
+import secrets
 import statistics
 import sys
 import time
@@ -192,7 +192,7 @@ def main() -> int:
         print(f'Could not reach {args.url}. Is `python api.py` running?')
         return 1
 
-    seed = args.seed if args.seed is not None else random.randrange(2 ** 32)
+    seed = args.seed if args.seed is not None else secrets.randbits(128)
     play(args.url, seed, args.ticks, args.render,
          args.simulate_latency_ms / 1000, args.verbose)
     return 0
