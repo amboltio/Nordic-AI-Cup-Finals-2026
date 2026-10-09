@@ -45,10 +45,13 @@ def predict_endpoint(request: RobotRobbersPredictRequestDto):
     validate_moves(response.moves)
 
     if request.game_ticks % LOG_EVERY_N_TICKS == 0 or request.is_terminal:
+        score = ('' if request.total_reward is None 
+                else f': {request.total_reward}')
+        
         logger.info(
             'tick %s: total reward %s%s',
             request.game_ticks,
-            request.total_reward,
+            score,
             ' (last tick)' if request.is_terminal else '',
         )
     return response

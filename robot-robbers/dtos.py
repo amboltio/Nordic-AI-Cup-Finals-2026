@@ -9,7 +9,7 @@ expect will not break anything. ``utils.validate_moves`` holds the strict
 rules the service applies to your answer.
 """
 
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -55,11 +55,11 @@ class RobotRobbersPredictRequestDto(BaseModel):
     # (6, 10, 4): six rows of ten [x, y, w, h] slots. See the README.
     state: List[List[List[int]]]
     # What the previous tick scored. Sent as a float, always a whole number.
-    reward: float
+    reward: Optional[float] = None
     # True only on the request for the last tick.
     is_terminal: bool
     # The score so far. Also sent as a float.
-    total_reward: float
+    total_reward: Optional[float] = None
     # How many ticks have been played before this one; 0 on the first request.
     game_ticks: int
 
