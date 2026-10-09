@@ -191,7 +191,7 @@ class RobotRobbersEnv:
 
                 # Give a penalty and take away the cashbag
                 if rx == sx and ry == sy and self._robber_cooldown[i] <= 0:
-                    self._robber_cooldown[i] = (
+                    self._robber_cooldown[i] = 1 + (
                         self._robber_cooldown_ticks if has_cashbags
                         else self._no_bag_cooldown_ticks)
 

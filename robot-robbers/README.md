@@ -150,8 +150,9 @@ Bags respawn at random free cells. Whenever fewer than five bags are in play
 map is topped back up to five bags even while robots are carrying some, and
 between five and nine bags can be in play at once.
 
-Drop spots never move and never run out. The three of them appear one per
-tick over the first three ticks; bags appear after the first tick. **The very
+Drop spots never move and never run out. They are part of the map: the same
+seed always gives the same three drop spots, however you play. They appear one
+per tick over the first three ticks; bags appear after the first tick. **The very
 first request, at `game_ticks = 0`, has no bags and no drop spots in it.**
 
 ### Scrooges
