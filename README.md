@@ -84,9 +84,9 @@ The team with the highest evaluation score wins. If two teams have the same
 evaluation score, the team whose evaluation attempt finished first ranks
 higher.
 
-TODO(finals): will the top teams be asked to hand in their code and agent for
-verification by the Scientific Jury, as in the main competition? If so, by
-when?
+The top teams are asked to hand in their code and agent for verification by
+the Scientific Jury, as in the main competition. Send it to
+[magnus@ambolt.io](mailto:magnus@ambolt.io) by the time the finals close.
 
 ## Getting started
 
@@ -116,9 +116,6 @@ deployment, you want to find out on the first morning, not an hour before the
 finals close.
 
 ## Frequently Asked Questions
-
-TODO(finals): confirm that the main competition's rules below carry over to
-the finals unchanged.
 
 **Q: Can I use a pretrained model or an existing RL library?**
 
