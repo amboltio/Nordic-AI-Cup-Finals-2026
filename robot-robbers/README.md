@@ -13,12 +13,6 @@ This is the case for the **Nordic AI Cup Finals 2026**. Read the
 [finals README](../README.md) for dates, eligibility and how the finals are
 judged.
 
-> [!WARNING]
-> **TODO(finals): the game-loop numbers are not final.** The tick count, the
-> per-request timeout and the total wait budget below (3000 ticks, 2 s,
-> 300 s) are still being tuned. The finals will be played with whatever is in
-> [`dtos.py`](dtos.py) when they open, and any change will be announced.
-
 ## Quickstart
 
 ```cmd
@@ -64,9 +58,7 @@ python local_evaluator.py
 
 You now have a working endpoint and a number to improve. The baseline is a
 greedy agent that plays sensibly and scores about 16 per game on average
-(TODO(finals): re-measure once the tick count is final; measured at 3000
-ticks over 20 maps, range -17 to 46). For comparison, standing still scores 0
-and random moves score about -5.
+
 
 ### What is in this folder
 
@@ -97,7 +89,7 @@ Every game is played on a 128x128 grid. Coordinates run from `(0, 0)` in the
 top-left corner to `(127, 127)`; `x` grows to the right and `y` grows
 **down**. Every robot, scrooge, cash bag and drop spot occupies a single cell.
 
-A game lasts exactly **3000 ticks** (TODO(finals): not final). On every tick
+A game lasts exactly **3000 ticks**. On every tick
 the evaluation service sends your endpoint the state of the game and you
 answer with one move for each of your five robots.
 
@@ -209,11 +201,6 @@ Robots and scrooges start on random free cells. A robot can start on the
 same cell as another robot or a scrooge, but no two scrooges start on the same
 cell.
 
-> [!NOTE]
-> TODO(finals): the rules in this section describe the game exactly as it
-> runs today. A few of them are under review and may still change before the
-> finals open. Any change will be announced.
-
 ## What the evaluator sends you
 
 One POST per tick, as JSON:
@@ -301,9 +288,6 @@ negative.
 
 ## Timing
 
-> [!WARNING]
-> TODO(finals): not final. See the warning at the top.
-
 The game is a fixed number of ticks, not a fixed amount of time, so a fast
 agent does not get more ticks than a slow one. What speed buys you is not
 losing ticks:
@@ -317,9 +301,9 @@ losing ticks:
   moves and the service stops calling you.
 
 300 seconds over 3000 ticks is **100 ms per tick on average, network
-included**. Your endpoint will be called from a server in TODO(finals):
-location of the evaluation service, so measure from somewhere comparable and
-leave headroom. `local_evaluator.py` reports your round-trip times and budget
+included**. Your endpoint will be called from a our server:
+so measure from somewhere comparable and leave headroom. 
+`local_evaluator.py` reports your round-trip times and budget
 use, and `--simulate-latency-ms` adds a delay to every request so you can see
 how much network distance you can afford.
 

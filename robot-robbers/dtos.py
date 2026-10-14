@@ -17,22 +17,18 @@ from pydantic import BaseModel
 # Game-loop numbers
 # --------------------------------------------------------------------------- #
 
-# TODO(finals): NOT FINAL. These three numbers are still being tuned, and the
-# finals will be played with whatever they are when the finals open. They will
-# be updated here, in the README and in an announcement on Discord before then.
-
 # Ticks per game. Every game is exactly this long, however fast or slow your
 # endpoint is.
-N_TICKS = 3000  # TODO(finals): not final
+N_TICKS = 3000  
 
 # How long the service waits for one response before it gives up on that tick
 # and plays it with no moves.
-REQUEST_TIMEOUT_SECONDS = 2  # TODO(finals): not final
+REQUEST_TIMEOUT_SECONDS = 2  
 
 # The total time the service will spend waiting for your endpoint over a game.
 # Once it is used up, the remaining ticks are played with no moves. 300 s over
 # 3000 ticks is 100 ms per tick on average, round trip included.
-MAX_AGENT_WAIT_SECONDS = 300  # TODO(finals): not final
+MAX_AGENT_WAIT_SECONDS = 300  
 
 # --------------------------------------------------------------------------- #
 # The game
